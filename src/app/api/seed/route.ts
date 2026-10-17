@@ -5,7 +5,6 @@ import { Project } from "@/models/Project";
 import { User } from "@/models/User";
 
 export async function GET(request: Request) {
-    // 1. The Security Lock
     const url = new URL(request.url);
     const key = url.searchParams.get("key");
 
@@ -15,209 +14,223 @@ export async function GET(request: Request) {
 
     await connectDB();
 
-    // ==========================================
-    // 1. SEEDING THE LEADERBOARD (USERS)
-    // ==========================================
-
-    // Create or grab the Genesis Creator safely (Idempotent)
+    // 1. Upsert Genesis Enterprise Lead
     const dummyUser = await User.findOneAndUpdate(
-        { email: "admin@syncstack.io" }, // The query
+        { email: "admin@syncstack.io" },
         {
-            name: "Campus Incubation Hub",
+            name: "Zeta Enterprise Innovation Hub",
             image: "https://github.com/github.png",
-            tech_skills: ["Product Management", "System Design"],
-            reputation_score: 999,
-            role: "Incubator Lead",
-            commitment_level: "Grinder"
+            github_url: "https://github.com/bhargavaalapati",
+            tech_skills: ["System Architecture", "Next.js", "FastAPI", "Cloud Native"],
+            reputation_score: 1450,
+            projects_shipped: 18,
+            trust_score: 98,
+            role: "Principal Solutions Architect",
+            bio: "Enterprise R&D hub orchestrating high-impact AI, Cloud, and IoT architectures.",
+            commitment_level: "Grinder",
         },
-        { upsert: true, new: true } // If not found, create it. Always return the doc.
+        { upsert: true, returnDocument: "after" }
     );
 
+    // 2. Idempotent Seeded Engineers with Verified AI Trust Telemetry
     const sampleUsers = [
         {
-            name: "Alex Chen",
-            email: `alex.chen.${Date.now()}@syncstack.io`, // Unique email per run
-            image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
-            role: "MERN Full Stack Engineer",
+            name: "Aarav Sharma",
+            email: "aarav.sharma@syncstack.io",
+            image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Aarav",
+            github_url: "https://github.com/torvalds",
+            role: "Lead Full-Stack & Cloud Architect",
+            bio: "Distributed systems engineer specializing in Next.js 15, FastAPI microservices, and Kubernetes.",
             commitment_level: "Grinder",
-            projects_shipped: 12,
-            reputation_score: 940,
-            tech_skills: ["React", "Node.js", "MongoDB", "Express"]
+            projects_shipped: 14,
+            reputation_score: 1280,
+            trust_score: 95,
+            tech_skills: ["Next.js", "TypeScript", "Node.js", "MongoDB", "Docker", "Kubernetes"],
         },
         {
             name: "Sarah Jenkins",
-            email: `sarah.j.${Date.now()}@syncstack.io`,
+            email: "sarah.jenkins@syncstack.io",
             image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah",
-            role: "Machine Learning Researcher",
+            github_url: "https://github.com/karpathy",
+            role: "Applied GenAI & RAG Scientist",
+            bio: "Building deterministic LLM pipelines, multi-agent LangGraph workflows, and low-latency inference.",
             commitment_level: "Balanced",
-            projects_shipped: 8,
-            reputation_score: 850,
-            tech_skills: ["Python", "TensorFlow", "PyTorch"]
+            projects_shipped: 11,
+            reputation_score: 1120,
+            trust_score: 92,
+            tech_skills: ["Python", "FastAPI", "Gemini API", "LangChain", "PyTorch", "Vector DB"],
         },
         {
             name: "David Kumar",
-            email: `david.k.${Date.now()}@syncstack.io`,
+            email: "david.kumar@syncstack.io",
             image: "https://api.dicebear.com/7.x/avataaars/svg?seed=David",
-            role: "Smart Contract Developer",
+            github_url: "https://github.com/VitalikButerin",
+            role: "FinTech & Zero-Knowledge Protocol Engineer",
+            bio: "High-throughput settlement engines, Rust systems programming, and smart contract auditing.",
             commitment_level: "Grinder",
             projects_shipped: 15,
-            reputation_score: 1200,
-            tech_skills: ["Solidity", "Rust", "Web3.js"]
+            reputation_score: 1340,
+            trust_score: 94,
+            tech_skills: ["Rust", "Solidity", "Go", "Redis", "PostgreSQL", "Web3.js"],
         },
         {
-            name: "Emily Rostova",
-            email: `emily.r.${Date.now()}@syncstack.io`,
-            image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emily",
-            role: "UI/UX Designer & Frontend",
-            commitment_level: "Casual",
-            projects_shipped: 4,
-            reputation_score: 420,
-            tech_skills: ["Figma", "Tailwind CSS", "React"]
+            name: "Elena Rostova",
+            email: "elena.rostova@syncstack.io",
+            image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Elena",
+            github_url: "https://github.com/shadcn",
+            role: "Design Systems & Frontend Lead",
+            bio: "Crafting accessible WCAG-compliant enterprise interfaces with React, Tailwind CSS, and Framer Motion.",
+            commitment_level: "Balanced",
+            projects_shipped: 9,
+            reputation_score: 890,
+            trust_score: 88,
+            tech_skills: ["React", "TypeScript", "Tailwind CSS", "Figma", "Next.js"],
         },
         {
             name: "Michael Chang",
-            email: `mike.c.${Date.now()}@syncstack.io`,
+            email: "michael.chang@syncstack.io",
             image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike",
-            role: "DevOps & Cloud Architect",
+            github_url: "https://github.com/kelseyhightower",
+            role: "Edge IoT & DevSecOps Architect",
+            bio: " Automated CI/CD telemetry, ESP32 edge sensor fleets, MQTT brokers, and AWS IoT Core.",
             commitment_level: "Balanced",
-            projects_shipped: 9,
-            reputation_score: 780,
-            tech_skills: ["Docker", "Kubernetes", "AWS"]
-        }
+            projects_shipped: 10,
+            reputation_score: 960,
+            trust_score: 91,
+            tech_skills: ["Docker", "AWS", "Python", "MQTT", "ESP32", "Terraform"],
+        },
     ];
 
-    await User.insertMany(sampleUsers);
+    for (const u of sampleUsers) {
+        await User.findOneAndUpdate({ email: u.email }, u, { upsert: true });
+    }
 
-    // ==========================================
-    // 2. SEEDING THE BULLETIN (PROJECTS)
-    // ==========================================
+    // 3. Enterprise Projects with Pre-Computed AI Blueprints
     const sampleProjects = [
         {
-            creator_id: dummyUser._id, // Use the upserted ID
-            title: "DeFi Yield Aggregator Protocol",
-            description: "Building a cross-chain yield optimizer smart contract system for the upcoming ETHGlobal hackathon. Need deep Web3 expertise.",
-            required_skills: ["Solidity", "Next.js", "Web3.js", "Ethers.js"],
-            domain: "Web3/Crypto",
-            event_name: "ETHGlobal",
+            creator_id: dummyUser._id,
+            title: "Autonomous FinOps & Cloud Cost Anomaly Engine",
+            description:
+                "Real-time multi-cloud telemetry analyzer that predicts Kubernetes & serverless spend spikes using Gemini 2.5 Flash and triggers automated Terraform scaling policies.",
+            required_skills: ["Python", "FastAPI", "Kubernetes", "Docker", "Next.js", "AWS"],
+            domain: "Cloud & FinOps AI",
+            event_name: "Zeta Innovate 2026",
             team_capacity: 4,
             filled_seats: 2,
             commitment_required: "Grinder",
-            status: "Open"
+            status: "Open",
+            architectureDiagram: `graph TD;\n    A["CloudWatch / Prometheus Telemetry"] --> B(Kafka Event Stream);\n    B --> C["FastAPI Anomaly Engine"];\n    C --> D["Gemini 2.5 Root-Cause Agent"];\n    D --> E["PostgreSQL Time-Series DB"];\n    D --> F["Next.js 15 FinOps Command Center"];`,
+            sprintMilestones: [
+                {
+                    phase: "Phase 1: Multi-Cloud Metric Ingestion",
+                    deliverables: ["Configure Prometheus & AWS Cost Explorer webhooks", "Build time-series normalization schema"],
+                    estimated_hours: 45,
+                },
+                {
+                    phase: "Phase 2: Agentic Root-Cause & Auto-Remediation",
+                    deliverables: ["Integrate Gemini 2.5 Flash structured cost advisor", "Build Slack/Webhook approval gates"],
+                    estimated_hours: 60,
+                },
+            ],
+            roleMatrix: [
+                { role_title: "Cloud Infrastructure Lead", required_skills: ["Kubernetes", "Docker", "AWS"], complexity: "High" },
+                { role_title: "GenAI Backend Engineer", required_skills: ["Python", "FastAPI", "Gemini API"], complexity: "High" },
+            ],
+            riskMatrix: [
+                {
+                    risk: "Over-aggressive auto-scaling policy termination",
+                    mitigation: "Enforce human-in-the-loop approval thresholds for production namespaces.",
+                    severity: "Critical",
+                },
+            ],
         },
         {
             creator_id: dummyUser._id,
-            title: "AI Medical Image Scanner",
-            description: "Computer vision model to detect anomalies in X-Rays. Have the dataset, need ML engineers capable of building inference pipelines.",
-            required_skills: ["Python", "TensorFlow", "PyTorch", "OpenCV"],
-            domain: "Healthcare AI",
-            event_name: "HealthTech Hack",
+            title: "Smart Cold-Chain Vaccine Telemetry & Anomaly Platform",
+            description:
+                "End-to-end IoT sensor mesh tracking temperature-sensitive pharmaceutical shipments with edge MQTT ingestion and predictive spoilage alerts.",
+            required_skills: ["Python", "MQTT", "ESP32", "React", "FastAPI", "MongoDB"],
+            domain: "Healthcare IoT",
+            event_name: "Zeta Innovate 2026",
+            team_capacity: 4,
+            filled_seats: 1,
+            commitment_required: "Balanced",
+            status: "Open",
+            architectureDiagram: `graph TD;\n    A["ESP32 Thermal Nodes"] --> B(MQTT TLS Broker);\n    B --> C["FastAPI Ingestion Worker"];\n    C --> D["Anomaly Detection Model"];\n    C --> E["MongoDB Atlas Telemetry Store"];\n    D --> F["Real-Time Cold-Chain Dashboard"];`,
+            sprintMilestones: [
+                {
+                    phase: "Phase 1: Edge Firmware & MQTT Broker Setup",
+                    deliverables: ["Configure TLS-authenticated MQTT ingestion", "Build offline ring-buffer retry logic"],
+                    estimated_hours: 40,
+                },
+                {
+                    phase: "Phase 2: Predictive Thermal Drift Alerts",
+                    deliverables: ["Train thermal excursion classifier", "Deploy live route monitoring UI"],
+                    estimated_hours: 55,
+                },
+            ],
+            roleMatrix: [
+                { role_title: "Embedded IoT Engineer", required_skills: ["ESP32", "MQTT", "Python"], complexity: "High" },
+                { role_title: "Full-Stack Dashboard Engineer", required_skills: ["React", "Next.js", "MongoDB"], complexity: "Medium" },
+            ],
+            riskMatrix: [
+                {
+                    risk: "Cellular dead-zones during highway transit",
+                    deliverables: [],
+                    mitigation: "Store encrypted telemetry snapshots on local flash and batch-sync upon reconnection.",
+                    severity: "Medium",
+                },
+            ],
+        },
+        {
+            creator_id: dummyUser._id,
+            title: "Zero-Trust API Compliance & Vulnerability Copilot",
+            description:
+                "Automated pre-deployment security gatekeeper that audits OpenAPI schemas, Dockerfiles, and repository commits against OWASP Top 10 and enterprise compliance rules.",
+            required_skills: ["TypeScript", "Next.js", "Python", "Docker", "FastAPI"],
+            domain: "Cybersecurity & DevSecOps",
+            event_name: "Zeta Innovate 2026",
             team_capacity: 3,
             filled_seats: 1,
-            commitment_required: "Balanced",
-            status: "Open"
-        },
-        {
-            creator_id: dummyUser._id,
-            title: "SyncStack Mobile Port",
-            description: "Looking to port our Next.js dashboard into a native mobile application using React Native or Flutter. Need UI/UX heavy lifters.",
-            required_skills: ["React Native", "Flutter", "TypeScript", "Tailwind CSS"],
-            domain: "Mobile Development",
-            event_name: "Campus Builder Weekend",
-            team_capacity: 4,
-            filled_seats: 3,
-            commitment_required: "Casual",
-            status: "Open"
-        },
-        {
-            creator_id: dummyUser._id,
-            title: "High-Frequency Trading Bot",
-            description: "Building an algorithmic trading bot utilizing web sockets for real-time order book execution. Needs low-latency language expertise.",
-            required_skills: ["Rust", "Go", "C++", "Redis"],
-            domain: "FinTech",
-            event_name: "Independent Project",
-            team_capacity: 2,
-            filled_seats: 1,
             commitment_required: "Grinder",
-            status: "Open"
+            status: "Open",
+            architectureDiagram: `graph TD;\n    A["GitHub PR Webhook"] --> B(FastAPI Security Scanner);\n    B --> C["AST & Dockerfile Analyzer"];\n    C --> D["Gemini 2.5 Patch Generator"];\n    D --> E["Automated PR Security Review"];\n    D --> F["Compliance Audit Dashboard"];`,
+            sprintMilestones: [
+                {
+                    phase: "Phase 1: Webhook & Static AST Parser",
+                    deliverables: ["Ingest GitHub diffs and OpenAPI specs", "Detect hardcoded secrets and IAM misconfigurations"],
+                    estimated_hours: 35,
+                },
+                {
+                    phase: "Phase 2: Automated Remediation PRs",
+                    deliverables: ["Generate drop-in code patches via Gemini 2.5", "Build executive compliance scorecard"],
+                    estimated_hours: 50,
+                },
+            ],
+            roleMatrix: [
+                { role_title: "Security Systems Engineer", required_skills: ["Python", "Docker", "FastAPI"], complexity: "High" },
+                { role_title: "Full-Stack Engineer", required_skills: ["TypeScript", "Next.js"], complexity: "Medium" },
+            ],
+            riskMatrix: [
+                {
+                    risk: "False-positive blocks on urgent hotfix deployments",
+                    mitigation: "Provide signed emergency bypass tokens with full audit logging.",
+                    severity: "Medium",
+                },
+            ],
         },
-        {
-            creator_id: dummyUser._id,
-            title: "Kubernetes Cluster Visualizer",
-            description: "A DevOps tool to visually map pod deployments and node health across AWS clusters. Backend infrastructure knowledge required.",
-            required_skills: ["Docker", "Kubernetes", "AWS", "Node.js"],
-            domain: "Cloud/DevOps",
-            event_name: "Independent Project",
-            team_capacity: 3,
-            filled_seats: 1,
-            commitment_required: "Balanced",
-            status: "Open"
-        },
-        {
-            creator_id: dummyUser._id,
-            title: "Smart Parking Slot IoT Tracker",
-            description: "Integrating ESP32 microcontrollers with a central server to track parking availability on campus in real-time.",
-            required_skills: ["C++", "IoT", "MQTT", "Python"],
-            domain: "Hardware/IoT",
-            event_name: "Smart City Hackathon",
-            team_capacity: 5,
-            filled_seats: 2,
-            commitment_required: "Balanced",
-            status: "Open"
-        },
-        {
-            creator_id: dummyUser._id,
-            title: "Automated Accessibility Auditor",
-            description: "A Chrome extension that parses DOM trees and flags WCAG compliance issues for visually impaired users.",
-            required_skills: ["JavaScript", "Chrome Extensions API", "HTML/CSS"],
-            domain: "Web Accessibility",
-            event_name: "Hack for Good",
-            team_capacity: 3,
-            filled_seats: 2,
-            commitment_required: "Casual",
-            status: "Open"
-        },
-        {
-            creator_id: dummyUser._id,
-            title: "AR Campus Navigation App",
-            description: "Using augmented reality to overlay directions to specific lecture halls through the phone's camera.",
-            required_skills: ["Swift", "ARKit", "Unity", "C#"],
-            domain: "Augmented Reality",
-            event_name: "University Demo Day",
-            team_capacity: 4,
-            filled_seats: 1,
-            commitment_required: "Grinder",
-            status: "Open"
-        },
-        {
-            creator_id: dummyUser._id,
-            title: "Open Source Database Driver",
-            description: "Contributing to a new async database driver. This is a highly technical systems programming task.",
-            required_skills: ["Rust", "PostgreSQL", "System Architecture"],
-            domain: "Open Source Core",
-            event_name: "Independent Project",
-            team_capacity: 2,
-            filled_seats: 1,
-            commitment_required: "Grinder",
-            status: "Open"
-        },
-        {
-            creator_id: dummyUser._id,
-            title: "P2P Textbook Marketplace",
-            description: "A classic MERN stack application for students to buy, sell, and trade textbooks locally without shipping fees.",
-            required_skills: ["MongoDB", "Express", "React", "Node.js"],
-            domain: "Web Development",
-            event_name: "Campus Builder Weekend",
-            team_capacity: 4,
-            filled_seats: 2,
-            commitment_required: "Balanced",
-            status: "Open"
-        }
     ];
 
-    await Project.insertMany(sampleProjects);
+    for (const proj of sampleProjects) {
+        await Project.findOneAndUpdate(
+            { title: proj.title },
+            proj,
+            { upsert: true }
+        );
+    }
 
     return NextResponse.json({
-        message: "10 Diverse Architectures Seeded Successfully.",
-        status: "Ready for Matchmaking Demo"
+        message: "Enterprise Talent Pool & AI-Blueprinted Architectures Seeded Successfully!",
+        status: "Zeta Innovate Demo Ready",
     });
 }

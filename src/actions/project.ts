@@ -7,7 +7,7 @@ import { Application } from "@/models/Application";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 
-// 1. Create a new project
+// 1. Create a new project (with optional AI Enterprise Blueprint)
 export async function createProject(formData: FormData) {
     const session = await auth();
     if (!session?.user?.id) throw new Error("Unauthorized: Must be logged in to create a project.");
@@ -17,14 +17,13 @@ export async function createProject(formData: FormData) {
     const title = formData.get("title") as string;
     const description = formData.get("description") as string;
     const required_skills_raw = formData.get("required_skills") as string;
+    const domain = (formData.get("domain") as string) || "Enterprise AI";
 
-    // Extract new metrics
-    const event_name = formData.get("event_name") as string || "Independent Project";
+    const event_name = (formData.get("event_name") as string) || "Zeta Innovate 2026";
     const team_capacity_raw = formData.get("team_capacity") as string;
     const team_capacity = team_capacity_raw ? parseInt(team_capacity_raw, 10) : 4;
-    const commitment_required = formData.get("commitment_required") as string || "Balanced";
+    const commitment_required = (formData.get("commitment_required") as string) || "Balanced";
 
-    // Explicit Date Parsing Logic
     const deadline_raw = formData.get("deadline") as string;
     const deadline = deadline_raw ? new Date(deadline_raw) : null;
 
@@ -33,19 +32,39 @@ export async function createProject(formData: FormData) {
         .map((skill) => skill.trim())
         .filter(Boolean);
 
+    // Parse AI Blueprint if generated during creation
+    const blueprintRaw = formData.get("blueprint_json") as string;
+    let blueprintFields: Record<string, any> = {};
+    if (blueprintRaw) {
+        try {
+            const parsed = JSON.parse(blueprintRaw);
+            blueprintFields = {
+                architectureDiagram: parsed.mermaid_architecture || "",
+                sprintMilestones: parsed.sprint_milestones || [],
+                roleMatrix: parsed.role_matrix || [],
+                riskMatrix: parsed.risk_matrix || [],
+            };
+        } catch (e) {
+            console.error("Failed to parse blueprint_json:", e);
+        }
+    }
+
     const newProject = await Project.create({
         creator_id: session.user.id,
         title,
         description,
         required_skills,
+        domain,
         status: "Open",
         event_name,
         team_capacity,
         commitment_required,
-        ...(deadline && { deadline }) // Only attach if it exists
+        ...(deadline && { deadline }),
+        ...blueprintFields,
     });
 
     revalidatePath("/bulletin");
+    revalidatePath("/dashboard");
     return JSON.parse(JSON.stringify(newProject));
 }
 
@@ -72,12 +91,10 @@ export async function updateProject(projectId: string, formData: FormData) {
     const description = formData.get("description") as string;
     const required_skills_raw = formData.get("required_skills") as string;
 
-    // Extract metrics for update
     const team_capacity_raw = formData.get("team_capacity") as string;
     const team_capacity = team_capacity_raw ? parseInt(team_capacity_raw, 10) : undefined;
     const commitment_required = formData.get("commitment_required") as string;
 
-    // Explicitly handle date updates. If empty string is sent, we nullify it.
     const deadline_raw = formData.get("deadline") as string;
     const deadline = deadline_raw ? new Date(deadline_raw) : null;
 
@@ -86,30 +103,26 @@ export async function updateProject(projectId: string, formData: FormData) {
         .map((skill) => skill.trim())
         .filter(Boolean);
 
-    // Build the update object carefully
     const updatePayload: any = {
         title,
         description,
         required_skills,
+        deadline,
     };
 
     if (team_capacity) updatePayload.team_capacity = team_capacity;
     if (commitment_required) updatePayload.commitment_required = commitment_required;
 
-    // Only update deadline if it was explicitly provided, otherwise allow removal via $unset if raw was empty string, or handle based on business logic. 
-    // To keep it simple, we explicitly overwrite it.
-    updatePayload.deadline = deadline;
-
-    // atomic write constraint confirming creator identity
     const updatedProject = await Project.findOneAndUpdate(
         { _id: projectId, creator_id: session.user.id },
         updatePayload,
-        { returnDocument: 'after' } // Modern standard
+        { returnDocument: "after" }
     );
 
     if (!updatedProject) throw new Error("Project not found or unauthorized.");
 
     revalidatePath("/bulletin");
+    revalidatePath("/dashboard");
     return JSON.parse(JSON.stringify(updatedProject));
 }
 
@@ -120,16 +133,14 @@ export async function deleteProject(projectId: string) {
 
     await connectDB();
 
-    // SOFT DELETE: We do not use findOneAndDelete. We update the status.
     const decommissionedProject = await Project.findOneAndUpdate(
         { _id: projectId, creator_id: session.user.id },
         { status: "Decommissioned" },
-        { returnDocument: 'after' }
+        { returnDocument: "after" }
     );
 
     if (!decommissionedProject) throw new Error("Project not found or unauthorized.");
 
-    // Update all pending applications to reflect the project closure
     await Application.updateMany(
         { project_id: projectId, status: "Pending" },
         { status: "Decommissioned" }

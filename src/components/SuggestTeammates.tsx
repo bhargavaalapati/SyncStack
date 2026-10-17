@@ -3,23 +3,51 @@
 import { useState, useEffect } from "react";
 import { getTeammateSuggestions } from "@/actions/ai";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Loader2, Timer } from "lucide-react";
-import { FaGithub } from "react-icons/fa";
+import {
+    Sparkles,
+    Loader2,
+    Timer,
+    ShieldCheck,
+    CheckCircle2,
+    AlertCircle,
+    Copy,
+    Check,
+    Minimize2,
+    Maximize2,
+    Maximize,
+    Briefcase,
+} from "lucide-react";
+import GithubIcon from "@/components/icons/GithubIcon";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export default function SuggestTeammates({ projectId }: { projectId: string }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [matches, setMatches] = useState<any[]>([]);
     const [hasFetched, setHasFetched] = useState(false);
+    const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+    const [modalSize, setModalSize] = useState<"compact" | "expanded" | "fullscreen">("expanded");
+
+    const sizeClasses = {
+        compact: "max-w-xl max-h-[75vh]",
+        expanded: "max-w-3xl max-h-[86vh]",
+        fullscreen: "max-w-[95vw] w-[95vw] max-h-[94vh] h-[94vh]",
+    };
 
     // Exponential Backoff State
     const [cooldown, setCooldown] = useState(0);
     const [failureCount, setFailureCount] = useState(0);
 
-    // Countdown Timer Effect
     useEffect(() => {
         if (cooldown <= 0) return;
         const timer = setInterval(() => setCooldown((prev) => prev - 1), 1000);
@@ -27,137 +55,308 @@ export default function SuggestTeammates({ projectId }: { projectId: string }) {
     }, [cooldown]);
 
     async function handleFetchSuggestions() {
-        if (hasFetched || cooldown > 0) return; // Block if cooling down or already fetched
+        if (hasFetched || cooldown > 0) return;
 
         setLoading(true);
         try {
             const results = await getTeammateSuggestions(projectId);
             setMatches(results);
             setHasFetched(true);
-            setFailureCount(0); // Reset failures on success!
+            setFailureCount(0);
         } catch (error: any) {
-            // EXPONENTIAL BACKOFF LOGIC
             const currentFailures = failureCount + 1;
             setFailureCount(currentFailures);
 
-            // Calculate penalty: 60s -> 120s -> 240s (Max 300s / 5 mins)
             const baseCooldown = 60;
             const penaltyMultiplier = Math.pow(2, currentFailures - 1);
             let nextCooldown = baseCooldown * penaltyMultiplier;
-
             if (nextCooldown > 300) nextCooldown = 300;
 
             setCooldown(nextCooldown);
-            setOpen(false); // Force close the modal on error to show the red button
+            setOpen(false);
 
             toast.error("AI Engine Overloaded", {
-                description: `Google Gemini is at capacity. Retrying is locked for ${nextCooldown}s to balance loads.`
+                description: `Retrying is locked for ${nextCooldown}s to balance loads.`,
             });
-
             console.error("Matchmaking failed:", error);
         } finally {
             setLoading(false);
         }
     }
 
+    function handleCopyPitch(pitch: string, idx: number) {
+        navigator.clipboard.writeText(pitch);
+        setCopiedIdx(idx);
+        toast.success("AI recruitment pitch copied to clipboard!");
+        setTimeout(() => setCopiedIdx(null), 2000);
+    }
+
     return (
-        <Dialog open={open} onOpenChange={(isOpen) => {
-            if (cooldown > 0) return; // Prevent opening if cooling down
-            setOpen(isOpen);
-            if (isOpen) handleFetchSuggestions();
-        }}>
+        <Dialog
+            open={open}
+            onOpenChange={(isOpen) => {
+                if (cooldown > 0) return;
+                setOpen(isOpen);
+                if (isOpen) handleFetchSuggestions();
+            }}
+        >
             <DialogTrigger asChild>
                 {cooldown > 0 ? (
-                    <Button size="sm" variant="destructive" disabled className="gap-2 opacity-90">
-                        <Timer className="w-4 h-4 animate-pulse" />
-                        Cooling Down ({cooldown}s)
+                    <Button size="sm" variant="destructive" disabled className="gap-1.5 opacity-90">
+                        <Timer className="w-3.5 h-3.5 animate-pulse" />
+                        Cooldown ({cooldown}s)
                     </Button>
                 ) : (
-                    <Button size="sm" variant="secondary" className="gap-2">
-                        <Sparkles className="w-4 h-4 text-amber-500" />
+                    <Button size="sm" variant="secondary" className="gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                         AI Match
                     </Button>
                 )}
             </DialogTrigger>
 
-            <DialogContent className="sm:max-w-150 max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-2xl">
-                        <Sparkles className="w-6 h-6 text-amber-500" />
-                        Gemini Candidate Analysis
-                    </DialogTitle>
-                    <DialogDescription>
-                        Evaluating semantic overlap between your architecture and campus developer portfolios.
-                    </DialogDescription>
+            <DialogContent
+                className={cn(
+                    "w-[95vw] sm:max-w-[850px] min-w-[340px] max-h-[88vh] min-h-[400px] resize overflow-auto p-6 sm:p-8",
+                    sizeClasses[modalSize]
+                )}
+            >
+                <DialogHeader className="border-b pb-4 pr-6">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
+                                <Sparkles className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-xl font-bold">
+                                    Explainable Multi-Vector Matchmaking
+                                </DialogTitle>
+                                <DialogDescription className="text-xs">
+                                    Evaluating semantic skill synergy, role complementarity, and verified GitHub trust telemetry.
+                                </DialogDescription>
+                            </div>
+                        </div>
+
+                        <div
+                            className="flex items-center gap-0.5 rounded-lg border bg-muted/50 p-0.5 shrink-0"
+                            role="group"
+                            aria-label="Modal size"
+                        >
+                            <Button
+                                size="icon-sm"
+                                variant={modalSize === "compact" ? "secondary" : "ghost"}
+                                onClick={() => setModalSize("compact")}
+                                className="h-6 w-6"
+                                title="Compact"
+                            >
+                                <Minimize2 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                                size="icon-sm"
+                                variant={modalSize === "expanded" ? "secondary" : "ghost"}
+                                onClick={() => setModalSize("expanded")}
+                                className="h-6 w-6"
+                                title="Expanded"
+                            >
+                                <Maximize2 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                                size="icon-sm"
+                                variant={modalSize === "fullscreen" ? "secondary" : "ghost"}
+                                onClick={() => setModalSize("fullscreen")}
+                                className="h-6 w-6"
+                                title="Fullscreen"
+                            >
+                                <Maximize className="h-3 w-3" />
+                            </Button>
+                        </div>
+                    </div>
                 </DialogHeader>
 
-                {/* Shortened & Punchy Notice */}
-                <div className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs leading-relaxed text-muted-foreground">
-                    <div className="flex items-center gap-2 font-bold text-amber-600 dark:text-amber-400 mb-1.5 text-sm">
-                        <Sparkles className="w-4 h-4" />
-                        Algorithmic Execution Notice
-                    </div>
-                    <p className="mb-2">
-                        Evaluates candidates using <strong>Semantic Space Overlap</strong> (functional capability vs. raw keywords).
-                    </p>
-                    <div className="flex items-center justify-between border-t border-amber-500/10 pt-2 mt-2 font-mono text-[10px] text-amber-700/80 dark:text-amber-400/70">
-                        <span>API Rate Ceiling: 5 Req / Min</span>
-                        <span className="bg-amber-500/10 px-1.5 py-0.5 rounded">Context Cache Active</span>
-                    </div>
-                </div>
-
-                <div className="py-4">
+                <div className="py-3">
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                            <Loader2 className="w-8 h-8 animate-spin mb-4" />
-                            <p>Analyzing developer repositories and tech stacks...</p>
+                        <div className="flex flex-col items-center justify-center py-14 text-muted-foreground">
+                            <Loader2 className="w-8 h-8 animate-spin mb-3 text-amber-500" />
+                            <p className="text-sm font-medium">
+                                Computing multi-vector synergy & auditing developer portfolios...
+                            </p>
                         </div>
                     ) : matches.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                            No suitable candidates found in the pool yet.
+                        <div className="text-center py-10 text-muted-foreground text-sm">
+                            No candidate profiles available in the talent pool yet.
                         </div>
                     ) : (
-                        <div className="grid gap-6">
-                            {matches.map((match, idx) => (
-                                <div key={idx} className="border rounded-lg p-4 bg-card shadow-sm">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div className="flex items-center gap-3">
-                                            {match.user?.image ? (
-                                                <img src={match.user.image} alt="avatar" className="w-10 h-10 rounded-full border" />
-                                            ) : (
-                                                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-bold">
-                                                    {match.user?.name?.charAt(0) || "U"}
+                        <div className="grid gap-4">
+                            {matches.map((match, idx) => {
+                                const score =
+                                    match.synergy_score ?? match.compatibility_score ?? 75;
+                                const rationale =
+                                    match.ai_icebreaker_pitch ||
+                                    match.reasoning ||
+                                    match.rationale ||
+                                    "Strong architectural alignment with project requirements.";
+                                const matchingSkills: string[] =
+                                    match.matching_strengths || match.matching_skills || [];
+                                const missingSkills: string[] =
+                                    match.skill_gaps || match.missing_skills || [];
+                                const trustScore = match.user?.trust_score;
+
+                                return (
+                                    <div
+                                        key={idx}
+                                        className="border rounded-xl p-5 bg-card/70 shadow-xs space-y-4 hover:border-primary/40 transition-colors"
+                                    >
+                                        <div className="flex flex-wrap justify-between items-start gap-4">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                {match.user?.image ? (
+                                                    <img
+                                                        src={match.user.image}
+                                                        alt="avatar"
+                                                        className="w-11 h-11 rounded-full border shrink-0"
+                                                    />
+                                                ) : (
+                                                    <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center font-bold shrink-0">
+                                                        {match.user?.name?.charAt(0) || "U"}
+                                                    </div>
+                                                )}
+                                                <div className="min-w-0">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <h4 className="font-bold text-base truncate">
+                                                            {match.user?.name || match.name}
+                                                        </h4>
+                                                        {match.role_fit && (
+                                                            <Badge
+                                                                variant="secondary"
+                                                                className="text-[10px] gap-1"
+                                                            >
+                                                                <Briefcase className="w-3 h-3 text-indigo-400" />
+                                                                {match.role_fit}
+                                                            </Badge>
+                                                        )}
+                                                        {trustScore ? (
+                                                            <Badge
+                                                                variant="outline"
+                                                                className="text-[10px] border-emerald-500/30 text-emerald-500 gap-1"
+                                                            >
+                                                                <ShieldCheck className="w-3 h-3" />
+                                                                {trustScore}% Verified
+                                                            </Badge>
+                                                        ) : null}
+                                                    </div>
+                                                    {match.user?.github_url && (
+                                                        <a
+                                                            href={
+                                                                match.user.github_url.startsWith("http")
+                                                                    ? match.user.github_url
+                                                                    : `https://github.com/${match.user.github_url}`
+                                                            }
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="text-xs text-muted-foreground flex items-center gap-1 hover:text-primary mt-0.5"
+                                                        >
+                                                            <GithubIcon className="w-3 h-3" /> GitHub Telemetry
+                                                        </a>
+                                                    )}
                                                 </div>
-                                            )}
-                                            <div>
-                                                <h4 className="font-bold">{match.user?.name}</h4>
-                                                <a href={match.user?.github_url} target="_blank" rel="noreferrer" className="text-xs text-muted-foreground flex items-center gap-1 hover:text-primary">
-                                                    <FaGithub className="w-3 h-3" /> GitHub Profile
-                                                </a>
+                                            </div>
+
+                                            {/* Synergy Score */}
+                                            <div className="flex items-center gap-3 shrink-0">
+                                                <div className="text-right">
+                                                    <span
+                                                        className={`text-2xl font-black ${
+                                                            score >= 80
+                                                                ? "text-emerald-500"
+                                                                : score >= 55
+                                                                ? "text-amber-500"
+                                                                : "text-red-500"
+                                                        }`}
+                                                    >
+                                                        {score}%
+                                                    </span>
+                                                    <span className="block text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+                                                        Synergy
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {/* Compatibility Score Badge */}
-                                        <div className="flex flex-col items-end">
-                                            <span className={`text-2xl font-black ${match.compatibility_score >= 80 ? 'text-green-500' : match.compatibility_score >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
-                                                {match.compatibility_score}%
-                                            </span>
-                                            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Match</span>
+                                        {/* AI Rationale & 1-Click Icebreaker Copy */}
+                                        <div className="rounded-lg bg-muted/40 p-3.5 border border-border/60 space-y-2">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                                    AI Match Rationale & Recruitment Pitch
+                                                </span>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-6 px-2 text-xs gap-1"
+                                                    onClick={() => handleCopyPitch(rationale, idx)}
+                                                >
+                                                    {copiedIdx === idx ? (
+                                                        <Check className="w-3 h-3 text-emerald-500" />
+                                                    ) : (
+                                                        <Copy className="w-3 h-3" />
+                                                    )}
+                                                    {copiedIdx === idx ? "Copied" : "Copy Pitch"}
+                                                </Button>
+                                            </div>
+                                            <p className="text-xs text-foreground/90 leading-relaxed">
+                                                {rationale}
+                                            </p>
+                                        </div>
+
+                                        {/* Matching Strengths vs. Skill Gaps */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                            <div className="space-y-1.5">
+                                                <span className="text-[11px] font-semibold text-emerald-500 flex items-center gap-1">
+                                                    <CheckCircle2 className="w-3 h-3" /> Matching Strengths
+                                                </span>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {matchingSkills.length > 0 ? (
+                                                        matchingSkills.map((s, i) => (
+                                                            <Badge
+                                                                key={i}
+                                                                variant="outline"
+                                                                className="text-[10px] border-emerald-500/30 bg-emerald-500/5"
+                                                            >
+                                                                {s}
+                                                            </Badge>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground">
+                                                            General engineering fit
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <span className="text-[11px] font-semibold text-amber-500 flex items-center gap-1">
+                                                    <AlertCircle className="w-3 h-3" /> Skill Gaps / Ramp-Up Areas
+                                                </span>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {missingSkills.length > 0 ? (
+                                                        missingSkills.map((s, i) => (
+                                                            <Badge
+                                                                key={i}
+                                                                variant="outline"
+                                                                className="text-[10px] border-amber-500/30 bg-amber-500/5"
+                                                            >
+                                                                {s}
+                                                            </Badge>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground">
+                                                            100% stack coverage
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-
-                                    <p className="text-sm text-muted-foreground mt-3 bg-muted/50 p-3 rounded-md border border-border/50">
-                                        <span className="font-semibold text-foreground">AI Rationale: </span>
-                                        {match.rationale}
-                                    </p>
-
-                                    <div className="mt-3 flex flex-wrap gap-1">
-                                        {match.user?.tech_skills?.map((skill: string, i: number) => (
-                                            <Badge key={i} variant="outline" className="text-[10px]">{skill}</Badge>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
