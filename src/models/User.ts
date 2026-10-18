@@ -62,5 +62,8 @@ const UserSchema = new Schema<IUser>(
     { timestamps: true }
 );
 
+// Compound index for Leaderboard sorting & skill-based candidate lookups
+UserSchema.index({ reputation_score: -1, trust_score: -1 });
+UserSchema.index({ tech_skills: 1 });
 // Prevent mongoose from recompiling the model upon hot-reload
 export const User = models.User || mongoose.model<IUser>("User", UserSchema);

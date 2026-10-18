@@ -39,8 +39,8 @@ export default function EditProjectDialog({ project }: { project: any }) {
                     Edit
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[550px]">
-                <DialogHeader>
+            <DialogContent className="w-[95vw] sm:max-w-[900px] min-w-[340px] max-h-[88vh] min-h-[420px] resize overflow-auto p-6 sm:p-8">
+                <DialogHeader className="space-y-1.5 border-b pb-4 pr-6">
                     <DialogTitle className="text-2xl font-bold">Modify Architecture</DialogTitle>
                     <DialogDescription>
                         Update project parameters or specify structural dependencies for the matching engine.

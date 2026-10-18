@@ -21,9 +21,6 @@ import {
     AlertCircle,
     Copy,
     Check,
-    Minimize2,
-    Maximize2,
-    Maximize,
     Briefcase,
 } from "lucide-react";
 import GithubIcon from "@/components/icons/GithubIcon";
@@ -134,40 +131,6 @@ export default function SuggestTeammates({ projectId }: { projectId: string }) {
                                     Evaluating semantic skill synergy, role complementarity, and verified GitHub trust telemetry.
                                 </DialogDescription>
                             </div>
-                        </div>
-
-                        <div
-                            className="flex items-center gap-0.5 rounded-lg border bg-muted/50 p-0.5 shrink-0"
-                            role="group"
-                            aria-label="Modal size"
-                        >
-                            <Button
-                                size="icon-sm"
-                                variant={modalSize === "compact" ? "secondary" : "ghost"}
-                                onClick={() => setModalSize("compact")}
-                                className="h-6 w-6"
-                                title="Compact"
-                            >
-                                <Minimize2 className="h-3 w-3" />
-                            </Button>
-                            <Button
-                                size="icon-sm"
-                                variant={modalSize === "expanded" ? "secondary" : "ghost"}
-                                onClick={() => setModalSize("expanded")}
-                                className="h-6 w-6"
-                                title="Expanded"
-                            >
-                                <Maximize2 className="h-3 w-3" />
-                            </Button>
-                            <Button
-                                size="icon-sm"
-                                variant={modalSize === "fullscreen" ? "secondary" : "ghost"}
-                                onClick={() => setModalSize("fullscreen")}
-                                className="h-6 w-6"
-                                title="Fullscreen"
-                            >
-                                <Maximize className="h-3 w-3" />
-                            </Button>
                         </div>
                     </div>
                 </DialogHeader>

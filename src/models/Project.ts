@@ -85,4 +85,7 @@ const ProjectSchema = new Schema<IProject>(
     { timestamps: true }
 );
 
+// Compound indexes for high-concurrency Bulletin & Dashboard queries
+ProjectSchema.index({ status: 1, createdAt: -1 });
+ProjectSchema.index({ creator_id: 1, status: 1 });
 export const Project = models.Project || mongoose.model<IProject>("Project", ProjectSchema);

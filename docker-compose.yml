@@ -1,26 +1,31 @@
-version: '3.8'
-
 services:
+  ai-engine:
+    build:
+      context: ./ai-engine
+      dockerfile: Dockerfile
+    container_name: syncstack-ai-engine
+    ports:
+      - "8000:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    restart: unless-stopped
+
   web:
     build:
       context: .
       dockerfile: Dockerfile.next
+    container_name: syncstack-web
     ports:
       - "3000:3000"
     environment:
       - MONGODB_URI=${MONGODB_URI}
       - AUTH_SECRET=${AUTH_SECRET}
+      - NEXTAUTH_SECRET=${AUTH_SECRET}
+      - NEXTAUTH_URL=http://localhost:3000
       - AUTH_GITHUB_ID=${AUTH_GITHUB_ID}
       - AUTH_GITHUB_SECRET=${AUTH_GITHUB_SECRET}
-      - NEXT_PUBLIC_AI_ENGINE_URL=http://ai-engine:8000/api/ai/match
+      - AI_ENGINE_BASE_URL=http://ai-engine:8000
+      - NEXT_PUBLIC_AI_ENGINE_URL=http://localhost:8000
     depends_on:
       - ai-engine
-
-  ai-engine:
-    build:
-      context: .
-      dockerfile: Dockerfile.ai
-    ports:
-      - "8000:8000"
-    environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    restart: unless-stopped

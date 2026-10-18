@@ -226,8 +226,8 @@ export default function ProfileForm({
                                     <Eye className="h-3 w-3" /> View Audit Report
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-2xl max-h-[82vh] overflow-y-auto">
-                                <DialogHeader>
+                            <DialogContent className="w-[95vw] sm:max-w-[900px] min-w-[340px] max-h-[88vh] min-h-[420px] resize overflow-auto p-6 sm:p-8">
+                                <DialogHeader className="space-y-1.5 border-b pb-4 pr-6">
                                     <DialogTitle className="flex items-center gap-2 text-lg">
                                         <ShieldCheck className="h-5 w-5 text-emerald-500" />
                                         AI Competency & GitHub Audit Report

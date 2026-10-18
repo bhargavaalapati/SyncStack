@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,17 +12,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Sparkles,
-  Cpu,
-  Calendar,
-  ShieldAlert,
-  Users,
-  Copy,
-  Check,
-  ExternalLink,
-} from "lucide-react";
-import { toast } from "sonner";
+import { Sparkles, Cpu, Calendar, ShieldAlert, Users } from "lucide-react";
+import MermaidDiagram from "@/components/blueprint/MermaidDiagram";
 
 export interface BlueprintData {
   architectureDiagram?: string;
@@ -43,48 +34,6 @@ export interface BlueprintData {
   }[];
 }
 
-/**
- * Automatically repairs LLM-generated Mermaid syntax so it never fails in mermaid.live:
- * 1. Strips markdown fences
- * 2. Forces 'graph TD;' onto its own first line
- * 3. Wraps any node label containing parentheses () inside double quotes ["..."]
- * 4. Ensures every edge statement is on a clean line ending with a semicolon ';'
- */
-function formatMermaidCode(raw?: string): string {
-  if (!raw) return "graph TD;\n    A[Client] --> B(API Gateway);";
-
-  let cleaned = raw
-    .replace(/```mermaid/gi, "")
-    .replace(/```/g, "")
-    .replace(/\\n/g, "\n")
-    .trim();
-
-  // Ensure graph declaration is on line 1 with a semicolon and newline
-  cleaned = cleaned.replace(
-    /^(?:graph|flowchart)\s+(TD|TB|BT|RL|LR)\s*;?\s*/i,
-    "graph $1;\n    "
-  );
-
-  // If multiple statements were flattened onto one line, split them before Node IDs
-  cleaned = cleaned.replace(
-    /(\]|"|\)|\})\s+([A-Z0-9_]+\s*(?:\[\vert{}\(\vert{}\{\vert{}-->\vert{}-.->\vert{}==>))/g, "$1;\n    $2" );    // Auto-quote [...] labels that contain parentheses (e.g., E[Graph DB (Neo4j)] -> E["Graph DB (Neo4j)"]) cleaned = cleaned.replace(/\[([^\]"]*?\([^\]]*?)\]/g, '["$1"]');
-
-  // Ensure each statement line ends with a semicolon
-  const lines = cleaned
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line, idx) => {
-      if (idx === 0 && /^graph\s+/i.test(line)) {
-        return line.endsWith(";") ? line : `${line};`;
-      }
-      const cleanLine = line.endsWith(";") ? line : `${line};`;
-      return `    ${cleanLine}`;
-    });
-
-  return lines.join("\n");
-}
-
 export function BlueprintModal({
   projectTitle,
   blueprint,
@@ -92,22 +41,11 @@ export function BlueprintModal({
   projectTitle: string;
   blueprint: BlueprintData;
 }) {
-  const [copied, setCopied] = useState(false);
-
   const hasBlueprint =
-    blueprint?.architectureDiagram ||
-    (blueprint?.sprintMilestones && blueprint.sprintMilestones.length > 0);
+    Boolean(blueprint?.architectureDiagram) ||
+    Boolean(blueprint?.sprintMilestones && blueprint.sprintMilestones.length > 0);
 
   if (!hasBlueprint) return null;
-
-  const validMermaidCode = formatMermaidCode(blueprint.architectureDiagram);
-
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(validMermaidCode);
-    setCopied(true);
-    toast.success("Valid Mermaid.js code copied! Ready for mermaid.live.");
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   return (
     <Dialog>
@@ -122,8 +60,7 @@ export function BlueprintModal({
         </Button>
       </DialogTrigger>
 
-      {/* sm:max-w-[900px] overrides Shadcn's sm:max-w-lg lock; 'resize' enables bottom-right drag arrow */}
-      <DialogContent className="w-[95vw] sm:max-w-[900px] min-w-[340px] max-h-[88vh] min-h-[420px] resize overflow-auto p-6 sm:p-8">
+      <DialogContent className="w-[95vw] sm:max-w-225 min-w-85 max-h-[88vh] min-h-105 resize overflow-auto p-6 sm:p-8">
         <DialogHeader className="space-y-1.5 border-b pb-4 pr-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -135,7 +72,7 @@ export function BlueprintModal({
                   {projectTitle}
                 </DialogTitle>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Enterprise System Architecture & Execution Blueprint • Drag bottom-right corner to resize
+                  Enterprise System Architecture & Execution Blueprint
                 </p>
               </div>
             </div>
@@ -236,49 +173,9 @@ export function BlueprintModal({
             )}
           </TabsContent>
 
-          {/* TAB 2: AUTO-VALIDATED MERMAID TOPOLOGY */}
-          <TabsContent value="architecture" className="mt-5 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h4 className="text-sm font-semibold">
-                  Auto-Validated System Topology (.mmd)
-                </h4>
-                <p className="text-xs text-muted-foreground">
-                  Syntax-sanitized with quoted node labels and semicolons for zero-error rendering.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 h-8 text-xs"
-                  onClick={handleCopyCode}
-                >
-                  {copied ? (
-                    <Check className="h-3.5 w-3.5 text-emerald-500" />
-                  ) : (
-                    <Copy className="h-3.5 w-3.5" />
-                  )}
-                  {copied ? "Copied!" : "Copy Code"}
-                </Button>
-                <a
-                  href="https://mermaid.live"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 h-8 px-3 rounded-md border text-xs font-medium hover:bg-muted transition-colors"
-                >
-                  Open Mermaid.live <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            </div>
-            <div className="relative rounded-xl border bg-zinc-950 text-zinc-50 p-5 font-mono text-xs overflow-x-auto shadow-inner">
-              <div className="absolute top-3 right-3 text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
-                Mermaid.js (Validated)
-              </div>
-              <pre className="whitespace-pre-wrap leading-relaxed text-indigo-200">
-                {validMermaidCode}
-              </pre>
-            </div>
+          {/* TAB 2: INTERACTIVE MERMAID DIAGRAM + VALIDATED CODE */}
+          <TabsContent value="architecture" className="mt-5">
+            <MermaidDiagram chart={blueprint.architectureDiagram} />
           </TabsContent>
 
           {/* TAB 3: RISK & COMPLIANCE MATRIX */}
