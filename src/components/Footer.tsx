@@ -16,6 +16,8 @@ export default function Footer() {
 
                 <div className="flex items-center gap-6 text-xs text-muted-foreground">
                     <Link href="/bulletin" className="hover:text-foreground transition-colors">Bulletin</Link>
+                    <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
+                    <Link href="/profile" className="hover:text-foreground transition-colors">Profile</Link>
 
                     {/* THE NEW FEEDBACK LINK */}
                     <a
@@ -30,7 +32,7 @@ export default function Footer() {
                     <Link href="https://github.com/bhargavaalapati/SyncStack." target="_blank" className="flex items-center gap-1 hover:text-foreground transition-colors">
                         <FaGithub className="w-3 h-3" /> System Docs
                     </Link>
-                    <span className="cursor-default select-none">v1.0.0-MVP</span>
+                    <span className="cursor-default select-none">v2.0.0-Enterprise</span>
                 </div>
             </div>
         </footer>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { getTeammateSuggestions } from "@/actions/ai";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,26 +23,44 @@ import {
     Copy,
     Check,
     Briefcase,
+    RefreshCw,
 } from "lucide-react";
 import GithubIcon from "@/components/icons/GithubIcon";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { AiQuotaNotice, useAiCooldown } from "@/components/ui/AiQuotaNotice";
+
+interface CandidateMatchItem {
+    name?: string;
+    synergy_score?: number;
+    compatibility_score?: number;
+    role_fit?: string;
+    ai_icebreaker_pitch?: string;
+    reasoning?: string;
+    rationale?: string;
+    matching_strengths?: string[];
+    matching_skills?: string[];
+    skill_gaps?: string[];
+    missing_skills?: string[];
+    user?: {
+        name?: string;
+        image?: string;
+        github_url?: string;
+        trust_score?: number;
+    };
+}
 
 export default function SuggestTeammates({ projectId }: { projectId: string }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [matches, setMatches] = useState<any[]>([]);
+    const [matches, setMatches] = useState<CandidateMatchItem[]>([]);
     const [hasFetched, setHasFetched] = useState(false);
     const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
-    const [modalSize, setModalSize] = useState<"compact" | "expanded" | "fullscreen">("expanded");
 
-    const sizeClasses = {
-        compact: "max-w-xl max-h-[75vh]",
-        expanded: "max-w-3xl max-h-[86vh]",
-        fullscreen: "max-w-[95vw] w-[95vw] max-h-[94vh] h-[94vh]",
-    };
+    const { isCoolingDown, remainingSeconds, triggerCooldown } = useAiCooldown(
+        `ai_match_${projectId}`,
+        60
+    );
 
-    // Exponential Backoff State
     const [cooldown, setCooldown] = useState(0);
     const [failureCount, setFailureCount] = useState(0);
 
@@ -51,16 +70,24 @@ export default function SuggestTeammates({ projectId }: { projectId: string }) {
         return () => clearInterval(timer);
     }, [cooldown]);
 
-    async function handleFetchSuggestions() {
-        if (hasFetched || cooldown > 0) return;
+    async function handleFetchSuggestions(forceRefresh = false) {
+        if ((!forceRefresh && hasFetched) || cooldown > 0) return;
+        if (forceRefresh && isCoolingDown) {
+            toast.error(`Please wait ${remainingSeconds}s before re-running live AI matchmaking.`);
+            return;
+        }
 
         setLoading(true);
         try {
-            const results = await getTeammateSuggestions(projectId);
+            const results = (await getTeammateSuggestions(projectId)) as CandidateMatchItem[];
             setMatches(results);
             setHasFetched(true);
             setFailureCount(0);
-        } catch (error: any) {
+            if (forceRefresh) {
+                triggerCooldown();
+                toast.success("Synergy rankings refreshed via AI Engine!");
+            }
+        } catch (error: unknown) {
             const currentFailures = failureCount + 1;
             setFailureCount(currentFailures);
 
@@ -94,31 +121,35 @@ export default function SuggestTeammates({ projectId }: { projectId: string }) {
             onOpenChange={(isOpen) => {
                 if (cooldown > 0) return;
                 setOpen(isOpen);
-                if (isOpen) handleFetchSuggestions();
+                if (isOpen) handleFetchSuggestions(false);
             }}
         >
             <DialogTrigger asChild>
                 {cooldown > 0 ? (
-                    <Button size="sm" variant="destructive" disabled className="gap-1.5 opacity-90">
+                    <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled
+                        className="gap-1.5 opacity-90"
+                    >
                         <Timer className="w-3.5 h-3.5 animate-pulse" />
                         Cooldown ({cooldown}s)
                     </Button>
                 ) : (
-                    <Button size="sm" variant="secondary" className="gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 font-medium shadow-xs"
+                    >
+                        <Sparkles className="w-3.5 h-3.5" />
                         AI Match
                     </Button>
                 )}
             </DialogTrigger>
 
-            <DialogContent
-                className={cn(
-                    "w-[95vw] sm:max-w-[850px] min-w-[340px] max-h-[88vh] min-h-[400px] resize overflow-auto p-6 sm:p-8",
-                    sizeClasses[modalSize]
-                )}
-            >
+            <DialogContent className="w-[95vw] sm:max-w-3xl min-w-85 max-h-[88vh] min-h-100 resize overflow-auto p-6 sm:p-8">
                 <DialogHeader className="border-b pb-4 pr-6">
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5">
                             <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
                                 <Sparkles className="w-5 h-5" />
@@ -132,10 +163,30 @@ export default function SuggestTeammates({ projectId }: { projectId: string }) {
                                 </DialogDescription>
                             </div>
                         </div>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={loading || isCoolingDown}
+                            onClick={() => handleFetchSuggestions(true)}
+                            className="h-8 text-xs gap-1.5"
+                        >
+                            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                            {isCoolingDown
+                                ? `Cooldown (${remainingSeconds}s)`
+                                : "Re-Run AI Match"}
+                        </Button>
                     </div>
                 </DialogHeader>
 
-                <div className="py-3">
+                {/* AI Hallucination & 60s Rate-Limit Disclaimer Banner */}
+                <AiQuotaNotice
+                    featureName="Multi-Vector AI Matchmaker"
+                    cooldownRemaining={remainingSeconds}
+                />
+
+                <div className="py-2">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-14 text-muted-foreground">
                             <Loader2 className="w-8 h-8 animate-spin mb-3 text-amber-500" />
@@ -171,8 +222,11 @@ export default function SuggestTeammates({ projectId }: { projectId: string }) {
                                         <div className="flex flex-wrap justify-between items-start gap-4">
                                             <div className="flex items-center gap-3 min-w-0">
                                                 {match.user?.image ? (
-                                                    <img
+                                                    <Image
                                                         src={match.user.image}
+                                                        width={44}
+                                                        height={44}
+                                                        unoptimized
                                                         alt="avatar"
                                                         className="w-11 h-11 rounded-full border shrink-0"
                                                     />
@@ -222,7 +276,6 @@ export default function SuggestTeammates({ projectId }: { projectId: string }) {
                                                 </div>
                                             </div>
 
-                                            {/* Synergy Score */}
                                             <div className="flex items-center gap-3 shrink-0">
                                                 <div className="text-right">
                                                     <span
@@ -243,7 +296,6 @@ export default function SuggestTeammates({ projectId }: { projectId: string }) {
                                             </div>
                                         </div>
 
-                                        {/* AI Rationale & 1-Click Icebreaker Copy */}
                                         <div className="rounded-lg bg-muted/40 p-3.5 border border-border/60 space-y-2">
                                             <div className="flex items-center justify-between gap-2">
                                                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -269,7 +321,6 @@ export default function SuggestTeammates({ projectId }: { projectId: string }) {
                                             </p>
                                         </div>
 
-                                        {/* Matching Strengths vs. Skill Gaps */}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                                             <div className="space-y-1.5">
                                                 <span className="text-[11px] font-semibold text-emerald-500 flex items-center gap-1">

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, Cpu, Calendar, ShieldAlert, Users } from "lucide-react";
 import MermaidDiagram from "@/components/blueprint/MermaidDiagram";
+import { AiQuotaNotice } from "@/components/ui/AiQuotaNotice";
 
 export interface BlueprintData {
   architectureDiagram?: string;
@@ -89,6 +90,7 @@ export function BlueprintModal({
           AI-generated enterprise system architecture and execution blueprint for {projectTitle}
         </DialogDescription>
 
+        <AiQuotaNotice featureName="AI Blueprint Architect" />
         <Tabs defaultValue="sprints" className="w-full mt-4">
           <TabsList className="grid w-full grid-cols-3 h-11 bg-muted/60 p-1">
             <TabsTrigger value="sprints" className="gap-2 text-xs font-semibold">

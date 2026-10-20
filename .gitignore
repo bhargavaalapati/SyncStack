@@ -69,3 +69,4 @@ __pycache__/
 
 # AI Engine Local Cache
 ai-engine/ai_cache.json
+ai-engine/__pycache__/

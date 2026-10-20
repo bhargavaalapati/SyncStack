@@ -16,7 +16,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { createProject } from "@/actions/project";
 import { generateProjectBlueprint, ProjectBlueprint } from "@/actions/ai";
-import { Sparkles, Loader2, CheckCircle2 } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, Timer } from "lucide-react";
+import { AiQuotaNotice, useAiCooldown } from "@/components/ui/AiQuotaNotice";
 import { toast } from "sonner";
 
 export default function CreateProjectDialog() {
@@ -30,9 +31,20 @@ export default function CreateProjectDialog() {
     const [requiredSkills, setRequiredSkills] = useState("");
     const [blueprint, setBlueprint] = useState<ProjectBlueprint | null>(null);
 
+    const { isCoolingDown, remainingSeconds, triggerCooldown } = useAiCooldown(
+        "auto_architect",
+        60
+    );
+
     async function handleAutoArchitect() {
         if (!title.trim() || !description.trim()) {
             toast.error("Enter a rough Project Title and a 1-line idea first!");
+            return;
+        }
+        if (isCoolingDown) {
+            toast.error(
+                `Rate-limit guard active. Please wait ${remainingSeconds}s or edit fields manually.`
+            );
             return;
         }
 
@@ -44,11 +56,12 @@ export default function CreateProjectDialog() {
                 setDescription(res.data.executive_summary);
                 setRequiredSkills(res.data.recommended_stack.join(", "));
                 setBlueprint(res.data);
+                triggerCooldown();
                 toast.success("AI Enterprise Architecture & Sprint Plan generated!");
             }
         } catch (err) {
             console.error("Auto-Architect error:", err);
-            toast.error("Failed to generate blueprint.");
+            toast.error("Failed to generate blueprint. You may fill the fields manually.");
         } finally {
             setIsArchitecting(false);
         }
@@ -60,7 +73,6 @@ export default function CreateProjectDialog() {
             await createProject(formData);
             toast.success("Project deployed to Bulletin with AI Blueprint!");
             setOpen(false);
-            // Reset state
             setTitle("");
             setDescription("");
             setRequiredSkills("");
@@ -81,7 +93,7 @@ export default function CreateProjectDialog() {
                     Broadcast Architecture
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-150 max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                         Deploy a New Project
@@ -91,8 +103,12 @@ export default function CreateProjectDialog() {
                     </DialogDescription>
                 </DialogHeader>
 
-                <form action={onSubmit} className="grid gap-5 py-3">
-                    {/* Hidden input carrying the structured AI blueprint to the Server Action */}
+                <AiQuotaNotice
+                    featureName="Autonomous Project Architect"
+                    cooldownRemaining={remainingSeconds}
+                />
+
+                <form action={onSubmit} className="grid gap-5 py-2">
                     {blueprint && (
                         <input
                             type="hidden"
@@ -131,7 +147,7 @@ export default function CreateProjectDialog() {
                     </div>
 
                     <div className="grid gap-2">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                             <Label htmlFor="description" className="font-semibold">
                                 Problem Statement & Scope
                             </Label>
@@ -140,13 +156,18 @@ export default function CreateProjectDialog() {
                                 variant="secondary"
                                 size="sm"
                                 onClick={handleAutoArchitect}
-                                disabled={isArchitecting}
+                                disabled={isArchitecting || isCoolingDown}
                                 className="h-7 text-xs gap-1.5 border border-indigo-500/30 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20"
                             >
                                 {isArchitecting ? (
                                     <>
                                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                         Architecting with Gemini 2.5...
+                                    </>
+                                ) : isCoolingDown ? (
+                                    <>
+                                        <Timer className="h-3.5 w-3.5" />
+                                        Cooldown ({remainingSeconds}s)
                                     </>
                                 ) : (
                                     <>
@@ -243,7 +264,11 @@ export default function CreateProjectDialog() {
                         </select>
                     </div>
 
-                    <Button type="submit" disabled={loading || isArchitecting} className="w-full mt-2">
+                    <Button
+                        type="submit"
+                        disabled={loading || isArchitecting}
+                        className="w-full mt-2"
+                    >
                         {loading ? "Deploying Blueprint..." : "Post to Bulletin"}
                     </Button>
                 </form>
