@@ -24,6 +24,24 @@ export interface LeaderboardDeveloper {
     reputation_score?: number;
     trust_score?: number;
     tech_skills?: string[];
+    updatedAt?: string;
+}
+
+function getDeveloperPresence(updatedAt?: string): {
+    label: string;
+    dotClass: string;
+} {
+    if (!updatedAt) {
+        return { label: "Offline", dotClass: "bg-zinc-500" };
+    }
+    const diffMs = Date.now() - new Date(updatedAt).getTime();
+    if (diffMs <= 10 * 60 * 1000) {
+        return { label: "Online Now (Active <10m ago)", dotClass: "bg-emerald-500" };
+    }
+    if (diffMs <= 24 * 60 * 60 * 1000) {
+        return { label: "Active Today", dotClass: "bg-amber-500" };
+    }
+    return { label: "Offline", dotClass: "bg-zinc-500" };
 }
 
 function computeStreakTelemetry(dev: LeaderboardDeveloper) {
@@ -186,6 +204,7 @@ export default function LeaderboardClient({
                     </thead>
                     <tbody className="divide-y">
                         {visibleDevs.map((dev, index) => {
+                            const presence = getDeveloperPresence(dev.updatedAt);
                             const { cells, streakDays } = computeStreakTelemetry(dev);
                             return (
                                 <tr
@@ -212,10 +231,7 @@ export default function LeaderboardClient({
                                                     {dev.name?.charAt(0) || "U"}
                                                 </div>
                                             )}
-                                            <span
-                                                title="Active Telemetry Node (Online)"
-                                                className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-background"
-                                            />
+                                            <span title={presence.label} className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ${presence.dotClass} ring-2 ring-background`} />
                                         </div>
                                     </td>
 

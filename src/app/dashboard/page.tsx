@@ -1,36 +1,114 @@
 import Navbar from "@/components/ui/Navbar";
+import Image from "next/image";
+import Link from "next/link";
 import { getDashboardData, getMyApplications } from "@/actions/application";
+import { getUserProfile } from "@/actions/profile";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import GithubIcon from "@/components/icons/GithubIcon";
 import DashboardActionButtons from "@/components/DashboardActionButtons";
-import { Users, ShieldCheck, CheckCircle2, Send, Clock } from "lucide-react";
+import { PageGuideBanner } from "@/components/ui/PageGuideBanner";
+import { DevProgressionCard } from "@/components/DevProgressionCard";
+import {
+    Users,
+    ShieldCheck,
+    CheckCircle2,
+    Send,
+    Clock,
+    Compass,
+    UserCircle,
+} from "lucide-react";
+
+interface ApplicantInfo {
+    name?: string;
+    email?: string;
+    image?: string;
+    role?: string;
+    bio?: string;
+    github_url?: string;
+    trust_score?: number;
+    tech_skills?: string[];
+}
+
+interface ProjectInfo {
+    _id?: string;
+    title?: string;
+    description?: string;
+    status?: string;
+    creator_id?: {
+        name?: string;
+        email?: string;
+    };
+}
+
+interface DashboardApplicationItem {
+    _id: string;
+    status: "Pending" | "Accepted" | "Rejected" | "Decommissioned" | string;
+    rejection_reason?: string;
+    applicant_id?: ApplicantInfo;
+    project_id?: ProjectInfo;
+}
 
 export default async function Dashboard() {
     const session = await auth();
     if (!session) redirect("/");
 
-    const [inboundApplications, outboundApplications] = await Promise.all([
+    const [rawInbound, rawOutbound, userProfile] = await Promise.all([
         getDashboardData(),
         getMyApplications(),
+        getUserProfile(),
     ]);
 
-    // Calculate real-time executive KPI metrics
+    const inboundApplications = (rawInbound || []) as DashboardApplicationItem[];
+    const outboundApplications = (rawOutbound || []) as DashboardApplicationItem[];
+
     const totalInbound = inboundApplications.length;
     const pendingInbound = inboundApplications.filter(
-        (a: any) => a.status === "Pending"
+        (a) => a.status === "Pending"
     ).length;
     const acceptedInbound = inboundApplications.filter(
-        (a: any) => a.status === "Accepted"
+        (a) => a.status === "Accepted"
     ).length;
     const totalOutbound = outboundApplications.length;
+
+    const skillsArray: string[] = Array.isArray(userProfile?.tech_skills)
+        ? userProfile.tech_skills
+        : [];
 
     return (
         <div className="min-h-screen bg-background flex flex-col">
             <Navbar />
-            <main className="flex-1 container mx-auto px-4 py-10 max-w-5xl space-y-8">
+            <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl space-y-8">
+                <PageGuideBanner
+                    currentPage="Mission Control"
+                    title="How the Workforce Command Center & Contact Privacy Work"
+                    description="Review inbound candidate applications, inspect AI-verified trust badges, and track your outbound project pitches."
+                    howItWorks={[
+                        "1. Inbound Talent Queue: Review applicants' verified GitHub Trust Scores and skill tags before accepting or declining.",
+                        "2. Zero-Spam Contact Reveal: Developer email addresses remain masked until a match is explicitly marked 'Accepted'.",
+                        "3. Outbound Application Tracker: Monitor real-time approval status across all architectures you have applied to.",
+                    ]}
+                    disclaimer="Governance Note: Accepting an applicant immediately unlocks direct email coordination for both the project lead and the engineer."
+                    isAuthenticated={true}
+                />
+
+                {userProfile && (
+                    <DevProgressionCard
+                        name={userProfile.name || session.user?.name || "Engineer"}
+                        email={userProfile.email || session.user?.email || ""}
+                        role={userProfile.role || "Full-Stack Engineer"}
+                        githubUrl={userProfile.github_url || ""}
+                        skillsCount={skillsArray.length}
+                        skillsList={skillsArray}
+                        trustScore={Number(userProfile.trust_score || 0)}
+                        projectsShipped={Number(userProfile.projects_shipped || 0)}
+                        reputationScore={Number(userProfile.reputation_score || 0)}
+                    />
+                )}
+
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-6">
                     <div>
                         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
@@ -40,10 +118,24 @@ export default async function Dashboard() {
                             Manage incoming talent pipelines, inspect AI-verified trust telemetry, and track project applications.
                         </p>
                     </div>
-                    <Badge variant="outline" className="w-fit gap-1.5 py-1 px-3 text-xs">
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                        Telemetry Synced
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Link href="/bulletin">
+                            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                                <Compass className="w-3.5 h-3.5 text-indigo-400" />
+                                Explore Bulletin
+                            </Button>
+                        </Link>
+                        <Link href="/profile">
+                            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                                <UserCircle className="w-3.5 h-3.5 text-emerald-400" />
+                                Audit Telemetry
+                            </Button>
+                        </Link>
+                        <Badge variant="outline" className="w-fit gap-1.5 py-1 px-3 text-xs">
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                            Telemetry Synced
+                        </Badge>
+                    </div>
                 </div>
 
                 {/* EXECUTIVE KPI TELEMETRY RIBBON */}
@@ -64,7 +156,9 @@ export default async function Dashboard() {
                             <span>Awaiting Review</span>
                             <Clock className="w-4 h-4 text-amber-500" />
                         </div>
-                        <p className="text-2xl font-black text-amber-500">{pendingInbound}</p>
+                        <p className="text-2xl font-black text-amber-500">
+                            {pendingInbound}
+                        </p>
                         <span className="text-[11px] text-muted-foreground">
                             Action required in queue
                         </span>
@@ -75,7 +169,9 @@ export default async function Dashboard() {
                             <span>Confirmed Matches</span>
                             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                         </div>
-                        <p className="text-2xl font-black text-emerald-500">{acceptedInbound}</p>
+                        <p className="text-2xl font-black text-emerald-500">
+                            {acceptedInbound}
+                        </p>
                         <span className="text-[11px] text-muted-foreground">
                             Onboarded engineers
                         </span>
@@ -116,16 +212,19 @@ export default async function Dashboard() {
                             </div>
                         ) : (
                             <div className="grid gap-4">
-                                {inboundApplications.map((app: any) => (
+                                {inboundApplications.map((app) => (
                                     <div
                                         key={app._id}
                                         className="border rounded-xl p-6 bg-card shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6"
                                     >
                                         <div className="flex items-start gap-4 min-w-0">
                                             {app.applicant_id?.image ? (
-                                                <img
+                                                <Image
                                                     src={app.applicant_id.image}
                                                     alt="avatar"
+                                                    width={48}
+                                                    height={48}
+                                                    unoptimized
                                                     className="w-12 h-12 rounded-full border shrink-0"
                                                 />
                                             ) : (
@@ -141,13 +240,13 @@ export default async function Dashboard() {
                                                     <Badge variant="secondary" className="text-[10px]">
                                                         {app.applicant_id?.role || "Developer"}
                                                     </Badge>
-                                                    {app.applicant_id?.trust_score > 0 && (
+                                                    {(app.applicant_id?.trust_score || 0) > 0 && (
                                                         <Badge
                                                             variant="outline"
                                                             className="text-[10px] border-emerald-500/30 text-emerald-500 gap-1"
                                                         >
                                                             <ShieldCheck className="w-3 h-3" />
-                                                            {app.applicant_id.trust_score}% Trust
+                                                            {app.applicant_id?.trust_score}% Trust
                                                         </Badge>
                                                     )}
                                                 </div>
@@ -164,7 +263,9 @@ export default async function Dashboard() {
                                                     {app.applicant_id?.github_url && (
                                                         <a
                                                             href={
-                                                                app.applicant_id.github_url.startsWith("http")
+                                                                app.applicant_id.github_url.startsWith(
+                                                                    "http"
+                                                                )
                                                                     ? app.applicant_id.github_url
                                                                     : `https://github.com/${app.applicant_id.github_url}`
                                                             }
@@ -225,9 +326,12 @@ export default async function Dashboard() {
 
                                             {app.status === "Rejected" && (
                                                 <div className="text-right text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20">
-                                                    <p className="font-bold text-red-500 mb-1">Declined</p>
+                                                    <p className="font-bold text-red-500 mb-1">
+                                                        Declined
+                                                    </p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        {app.rejection_reason || "No reason provided."}
+                                                        {app.rejection_reason ||
+                                                            "No reason provided."}
                                                     </p>
                                                 </div>
                                             )}
@@ -251,7 +355,7 @@ export default async function Dashboard() {
                             </div>
                         ) : (
                             <div className="grid gap-4">
-                                {outboundApplications.map((app: any) => {
+                                {outboundApplications.map((app) => {
                                     const isAlive =
                                         app.project_id &&
                                         app.project_id.status !== "Decommissioned";
@@ -278,7 +382,7 @@ export default async function Dashboard() {
                                                 <div className="flex items-center gap-3">
                                                     <span className="text-xs font-medium text-muted-foreground">
                                                         {isAlive
-                                                            ? `Led by ${app.project_id?.creator_id?.name}`
+                                                            ? `Led by ${app.project_id?.creator_id?.name || "Project Lead"}`
                                                             : "Creator Unavailable"}
                                                     </span>
                                                     <Badge
@@ -288,7 +392,8 @@ export default async function Dashboard() {
                                                                 ? "text-amber-500 border-amber-500/30"
                                                                 : app.status === "Accepted"
                                                                 ? "text-emerald-500 border-emerald-500/30"
-                                                                : app.status === "Decommissioned"
+                                                                : app.status ===
+                                                                  "Decommissioned"
                                                                 ? "text-gray-500 border-gray-500/30"
                                                                 : "text-red-500 border-red-500/30"
                                                         }
@@ -325,7 +430,8 @@ export default async function Dashboard() {
                                                                 "Went with another candidate."}
                                                         </p>
                                                     </div>
-                                                ) : app.status === "Decommissioned" || !isAlive ? (
+                                                ) : app.status === "Decommissioned" ||
+                                                  !isAlive ? (
                                                     <div className="text-right text-sm bg-gray-500/10 p-3 rounded-lg border border-gray-500/20">
                                                         <p className="font-bold text-gray-400 mb-1">
                                                             Project Closed

@@ -5,15 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, Copy, Check, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
+const CANONICAL_SITE_URL = "https://sync-stack-virid.vercel.app";
+
 export function SummarizeWithAi() {
     const [copied, setCopied] = useState(false);
 
-    const siteUrl =
-        typeof window !== "undefined"
-            ? window.location.origin
-            : "https://syncstack.vercel.app";
-
-    const rawPrompt = `Analyze and summarize SyncStack Enterprise (${siteUrl}), an AI-powered project architecture, anti-hallucination GitHub skill verification, and multi-vector workforce matchmaking platform built with Next.js 16, Python FastAPI, Google Gemini 2.5 Flash, and MongoDB Atlas. Highlight its key enterprise innovations, system architecture, and scalability.`;
+    const rawPrompt = `Analyze and summarize SyncStack Enterprise (${CANONICAL_SITE_URL}), an AI-powered project architecture, anti-hallucination GitHub skill verification, Spec-to-Repo Sprint 0 compiler, and multi-vector workforce matchmaking platform built with Next.js 16, Python FastAPI, Google Gemini 2.5 Flash, and MongoDB Atlas. Highlight its key enterprise innovations, system architecture, and scalability.`;
 
     const encodedPrompt = encodeURIComponent(rawPrompt);
 
@@ -48,7 +45,7 @@ export function SummarizeWithAi() {
     function handleCopyPrompt() {
         navigator.clipboard.writeText(rawPrompt);
         setCopied(true);
-        toast.success("AI evaluation prompt + website link copied!");
+        toast.success("AI evaluation prompt + live website link copied!");
         setTimeout(() => setCopied(false), 2000);
     }
 

@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, Cpu, Calendar, ShieldAlert, Users } from "lucide-react";
 import MermaidDiagram from "@/components/blueprint/MermaidDiagram";
 import { AiQuotaNotice } from "@/components/ui/AiQuotaNotice";
+import { SpecToRepoCompiler } from "@/components/blueprint/SpecToRepoCompiler";
 
 export interface BlueprintData {
   architectureDiagram?: string;
@@ -92,7 +93,7 @@ export function BlueprintModal({
 
         <AiQuotaNotice featureName="AI Blueprint Architect" />
         <Tabs defaultValue="sprints" className="w-full mt-4">
-          <TabsList className="grid w-full grid-cols-3 h-11 bg-muted/60 p-1">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-11 bg-muted/60 p-1">
             <TabsTrigger value="sprints" className="gap-2 text-xs font-semibold">
               <Calendar className="h-4 w-4 shrink-0" />
               <span className="truncate">Sprints & Workforce</span>
@@ -104,6 +105,9 @@ export function BlueprintModal({
             <TabsTrigger value="risks" className="gap-2 text-xs font-semibold">
               <ShieldAlert className="h-4 w-4 shrink-0" />
               <span className="truncate">Risk & Compliance</span>
+            </TabsTrigger>
+            <TabsTrigger value="compiler" className="text-xs">
+                ⚡ Spec-to-Repo
             </TabsTrigger>
           </TabsList>
 
@@ -203,6 +207,9 @@ export function BlueprintModal({
                 </div>
               ))}
             </div>
+          </TabsContent>
+          <TabsContent value="compiler" className="mt-4">
+              <SpecToRepoCompiler blueprint={blueprint} />
           </TabsContent>
         </Tabs>
       </DialogContent>

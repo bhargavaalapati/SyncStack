@@ -6,8 +6,11 @@ export interface IMessage extends Document {
     sender_image?: string;
     sender_role?: string;
     trust_score?: number;
-    tag: "Team Up" | "Architecture" | "General";
+    tag: "Team Up" | "Architecture" | "General" | "AI Agent";
     content: string;
+    reply_to_name?: string;
+    reply_to_snippet?: string;
+    is_agent?: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -21,15 +24,17 @@ const MessageSchema = new Schema<IMessage>(
         trust_score: { type: Number, default: 0 },
         tag: {
             type: String,
-            enum: ["Team Up", "Architecture", "General"],
+            enum: ["Team Up", "Architecture", "General", "AI Agent"],
             default: "General",
         },
-        content: { type: String, required: true, maxlength: 280 },
+        content: { type: String, required: true, maxlength: 360 },
+        reply_to_name: { type: String, default: "" },
+        reply_to_snippet: { type: String, default: "" },
+        is_agent: { type: Boolean, default: false },
     },
     { timestamps: true }
 );
 
-// Compound index for fast chronological lobby polling
 MessageSchema.index({ createdAt: -1 });
 
 export const Message =

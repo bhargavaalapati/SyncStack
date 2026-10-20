@@ -35,6 +35,7 @@ export default async function Leaderboard() {
         reputation_score: d.reputation_score || 0,
         trust_score: d.trust_score || 0,
         tech_skills: Array.isArray(d.tech_skills) ? d.tech_skills : [],
+        updatedAt: d.updatedAt ? new Date(d.updatedAt as Date).toISOString() : "",
     }));
 
     let userProjects: UserProjectOption[] = [];
